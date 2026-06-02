@@ -121,10 +121,7 @@ html_soup = basic_parser(url_udilischa)
 
 my_products = None
 
-# =====================================================================
-# ИСПОЛНЯЕМЫЙ КОД: АВТОМАТИЧЕСКАЯ ТРАНСФОРМАЦИЯ HTML ПОД ВАШУ ФУНКЦИЮ
-# =====================================================================
-
+\
 if html_soup:
     print("Страница успешно получена. Начинаем адаптацию списка товаров под вашу функцию...")
     
@@ -200,3 +197,73 @@ def parse_multiple_pages(base_url, max_pages=5):
             time.sleep(1)
     
     return all_data
+
+
+import datetime
+
+import time
+import subprocess
+import sys
+import schedule
+# Автоматическая проверка и установка schedule
+try:
+    import schedule
+except ModuleNotFoundError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "schedule"])
+    import schedule
+def scheduled_parsing():
+    # Проверяем текущий день месяца
+    if datetime.datetime.now().day != 2:
+        return  # Если сегодня не 2-е число, выходим из функции
+        
+    print(f"Ровно 2-е число! Запуск планировщика: {datetime.datetime.now()}")
+    
+    
+    target_url = "https://proffish.ru" 
+    soup_data = basic_parser(target_url)
+    
+    if soup_data:
+        parsed_items = extract_data(soup_data)
+        if parsed_items:
+            df = pd.DataFrame(parsed_items)
+            df.drop_duplicates(inplace=True)
+            df = df[df['title'].str.strip() != '']
+            
+            output_file = "parsed_products.csv"
+            df.to_csv(output_file, index=False, encoding='utf-8-sig')
+            print(f"Данные успешно обновлены в {output_file}")
+    
+
+
+schedule.every().day.at("10:03").do(scheduled_parsing)
+
+print("Планировщик запущен и ожидает 2-го числа...")
+
+
+while True:
+    schedule.run_pending()
+    time.sleep(1)
+
+
+#Контрольные вопросы:
+# 1. Какие методы BeautifulSoup используются для поиска элементов?
+# Самые популярные и эффективные методы:
+# •	find() — ищет первый подходящий элемент. Возвращает объект тега или None.
+# •	find_all() — ищет все подходящие элементы. Возвращает список (даже если найден один тег).
+# •	select_one() — ищет первый элемент через CSS-селектор (как в CSS/JavaScript: div.class, #id).
+# •	select() — ищет все элементы через CSS-селектор 
+# •	2. Почему важно использовать User-Agent при парсинге?
+# •	Маскировка под браузер: По умолчанию библиотека requests отправляет заголовок python-requests/2.X. Сайты сразу видят робота и блокируют его.
+# •	Обход базовой защиты: Установка реального User-Agent (например, Chrome на Windows) показывает серверу, что страницу запрашивает обычный человек.
+# •	Защита от капчи: Без корректного заголовка сайт может вместо товаров выдать страницу с капчей или ошибку 403 Forbidden.
+# 3. Как обрабатываются исключения при парсинге?
+# Исключения обрабатываются с помощью блоков try - except, чтобы одна ошибка не ломала весь скрипт:
+# •	Сетевые ошибки: Запросы оборачивают в try на случай падения интернета, недоступности сайта или таймаута (requests.exceptions.RequestException).
+# •	Ошибки структуры (DOM): При поиске тегов может вернуться None. Если попытаться взять атрибут у None (например, None['href']), вылетит AttributeError. Для этого элементы проверяют через if element:.
+# •	Ошибки цикла: Как в вашем коде, обработка каждого отдельного товара оборачивается в try-except. Если один товар оформлен на сайте криво, скрипт выведет ошибку, не упадет и перейдет к следующему товару.
+# 4. Какие существуют способы оптимизации при работе с большими объемами данных?
+# •	Использование сессий: requests.Session() вместо обычного requests.get(). Это удерживает TCP-соединение открытым и ускоряет запросы к одному сайту в 2–3 раза.
+# •	Парсер lxml: Использование BeautifulSoup(html, 'lxml') вместо 'html.parser'. Библиотека lxml написана на C и работает значительно быстрее.
+# •	Многопоточность/Асинхронность: Использование concurrent.futures или библиотеки aiohttp для скачивания сотен страниц одновременно, а не по очереди.
+# •	Генераторы и чанки (Chunks): Пакетированная запись в файл. Не копить миллион строк в оперативной памяти, а дописывать в CSV порциями по 1000 штук через df.to_csv(..., mode='a').
+

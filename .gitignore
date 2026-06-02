@@ -21,3 +21,6 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
+
+parsed_products.csv
+proffish_final_data.csv
